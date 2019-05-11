@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "355451625187",
+    "firebase_url": "https://donatekuy.firebaseio.com",
+    "project_id": "donatekuy",
+    "storage_bucket": "donatekuy.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:355451625187:android:c5bf1316ec622cfb",
+        "android_client_info": {
+          "package_name": "com.example.donatekuyv2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "355451625187-n1a6198oau0jisaqgb0l7hll101rokke.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEr0AlrdAgVIds70ZYz3evmgtoFAp0Obc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "355451625187-n1a6198oau0jisaqgb0l7hll101rokke.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
