@@ -1,15 +1,12 @@
+import 'package:donatekuyv2/auth_provider.dart';
 import 'package:donatekuyv2/theme.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'auth.dart';
-import 'home.dart';
 import 'register.dart';
 import 'theme.dart';
 
 class LoginPage extends StatefulWidget {
-  final BaseAuth auth;
   final VoidCallback onSignedIn;
-  LoginPage({Key key, this.auth, this.onSignedIn}) : super(key: key);
+  LoginPage({Key key, this.onSignedIn}) : super(key: key);
 
   _LoginPageState createState() => _LoginPageState();
 }
@@ -145,7 +142,8 @@ class _LoginPageState extends State<LoginPage> {
     if (_form.validate()) {
       _form.save();
       try {
-        String userId = await widget.auth.signInWithEmailAndPassword(_email, _password);
+        var auth = AuthProvider.of(context).auth;
+        String userId = await auth.signInWithEmailAndPassword(_email, _password);
         print('Signed in: $userId');
         widget.onSignedIn();
       } catch (e) {
@@ -159,7 +157,7 @@ class _LoginPageState extends State<LoginPage> {
   _navToRegister(BuildContext context) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RegisterPage(auth: Auth())),
+      MaterialPageRoute(builder: (context) => RegisterPage()),
     );
     if (result != null) {
       Scaffold.of(context)

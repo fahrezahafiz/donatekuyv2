@@ -1,18 +1,20 @@
-import 'auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:donatekuyv2/auth_provider.dart';
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
 
 class RegisterPage extends StatefulWidget {
-  final BaseAuth auth;
-  RegisterPage({Key key, this.auth}) : super(key: key);
+  RegisterPage({Key key}) : super(key: key);
 
   _RegisterPageState createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  String _fName, _lName, _email, _password, _phone;
+  String _fName, _lName, _email, _password, _phone, _location;
+  final String _avatar =
+      'https://firebasestorage.googleapis.com/v0/b/donatekuy.appspot.com/o/default-avatar.png?alt=media&token=33861c61-c627-4fe1-98a6-4ba0e1e9f935';
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +117,46 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
+                    Padding(padding: EdgeInsets.symmetric(vertical: 8)),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: Firestore.instance
+                          .collection('location')
+                          .orderBy('name')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return Text('Loading...');
+                        List<DropdownMenuItem> locations = [];
+                        for (int i = 0;
+                            i < snapshot.data.documents.length;
+                            i++) {
+                          DocumentSnapshot snap = snapshot.data.documents[i];
+                          locations.add(DropdownMenuItem(
+                            child: Text(snap['name']),
+                            value: snap['name'],
+                          ));
+                        }
+                        return InputDecorator(
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.fromLTRB(16, 3, 16, 3),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            labelText: 'Location',
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton(
+                              items: locations,
+                              onChanged: (value) {
+                                setState(() {
+                                  _location = value;
+                                });
+                              },
+                              value: _location,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    Padding(padding: EdgeInsets.symmetric(vertical: 40)),
                   ],
                 ),
               ),
@@ -136,7 +178,9 @@ class _RegisterPageState extends State<RegisterPage> {
     if (_form.validate()) {
       _form.save();
       try {
-        String userId = await widget.auth.createUserWithEmailAndPassword(_email, _password, _fName, _lName, _phone);
+        var auth = AuthProvider.of(context).auth;
+        String userId = await auth.createUserWithEmailAndPassword(
+            _email, _password, _fName, _lName, _phone, _location, _avatar);
         print('Registered user: $userId');
         Navigator.pop(context, 'Register success!');
       } catch (e) {
@@ -146,21 +190,23 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     }
   }
-  void _showError(dynamic e){
+
+  void _showError(dynamic e) {
     showDialog(
-      context: context,
-      builder: (BuildContext context){
-        return AlertDialog(
-          title: Text('Register error'),
-          content: Text(e.message),
-          actions: <Widget>[
-            FlatButton(
-              child: Text('Close'),
-              onPressed: (){Navigator.of(context).pop();},
-            ),
-          ],
-        );
-      }
-    );
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Register error'),
+            content: Text(e.message),
+            actions: <Widget>[
+              FlatButton(
+                child: Text('Close'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        });
   }
 }

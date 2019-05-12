@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -7,7 +6,6 @@ import 'package:path/path.dart';
 import 'auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
 import 'theme.dart';
 
 class AddDonationPage extends StatefulWidget {
@@ -40,21 +38,37 @@ class AddDonationPageState extends State<AddDonationPage> {
   Future<Null> _getUserDetails() async {
     FirebaseUser currUser = await FirebaseAuth.instance.currentUser();
     setState(() {
-     user = currUser; 
+      user = currUser;
     });
   }
 
-  Future getImageFromGallery() async {
-    var selectedImage = await ImagePicker.pickImage(source: ImageSource.gallery);
+  Future getImageFromGallery(BuildContext context) async {
+    var selectedImage =
+        await ImagePicker.pickImage(source: ImageSource.gallery);
     setState(() {
-     image = selectedImage;
+      image = selectedImage;
     });
+    Navigator.pop(context);
   }
-  Future getImageFromCamera() async {
+
+  Future getImageFromCamera(BuildContext context) async {
     var selectedImage = await ImagePicker.pickImage(source: ImageSource.camera);
     setState(() {
-     image = selectedImage;
-     fileName = basename(image.path);
+      image = selectedImage;
+      fileName = basename(image.path);
+    });
+    Navigator.pop(context);
+  }
+
+  Future uploadImage() async {
+    fileName = basename(image.path);
+    final StorageReference firebaseStorageRef =
+        FirebaseStorage.instance.ref().child('images/$fileName');
+    final StorageUploadTask task = firebaseStorageRef.putFile(image);
+
+    String getUrl = await (await task.onComplete).ref.getDownloadURL();
+    setState(() {
+      imageUrl = getUrl;
     });
   }
 
@@ -65,6 +79,7 @@ class AddDonationPageState extends State<AddDonationPage> {
       theme: myTheme(),
       home: Scaffold(
         appBar: AppBar(
+          centerTitle: true,
           title: Text('Add Donation'),
           leading: IconButton(
             icon: Icon(Icons.close),
@@ -99,33 +114,35 @@ class AddDonationPageState extends State<AddDonationPage> {
                     ),
                     Padding(padding: EdgeInsets.symmetric(vertical: 8)),
                     StreamBuilder<QuerySnapshot>(
-                      stream: Firestore.instance.collection('categories').orderBy('name').snapshots(),
-                      builder: (context, snapshot){
+                      stream: Firestore.instance
+                          .collection('categories')
+                          .orderBy('name')
+                          .snapshots(),
+                      builder: (context, snapshot) {
                         if (!snapshot.hasData) return Text('Loading...');
                         List<DropdownMenuItem> categories = [];
-                        for (int i=0; i<snapshot.data.documents.length; i++){
+                        for (int i = 0;
+                            i < snapshot.data.documents.length;
+                            i++) {
                           DocumentSnapshot snap = snapshot.data.documents[i];
-                          categories.add(
-                            DropdownMenuItem(
-                              child: Text(snap['name']),
-                              value: snap['name'],
-                            )
-                          );
+                          categories.add(DropdownMenuItem(
+                            child: Text(snap['name']),
+                            value: snap['name'],
+                          ));
                         }
                         return InputDecorator(
                           decoration: InputDecoration(
                             contentPadding: EdgeInsets.fromLTRB(16, 3, 16, 3),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10)
-                            ),
+                                borderRadius: BorderRadius.circular(10)),
                             labelText: 'Category',
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton(
                               items: categories,
-                              onChanged: (value){
+                              onChanged: (value) {
                                 setState(() {
-                                 _category = value; 
+                                  _category = value;
                                 });
                               },
                               value: _category,
@@ -225,54 +242,52 @@ class AddDonationPageState extends State<AddDonationPage> {
                         );
                       },
                     ),
-                    SizedBox(height: 40),
+                    SizedBox(height: 20),
+                    dividerWithText('I M A G E'),
+                    SizedBox(height: 20),
                     Center(
-              child: Container( 
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                      border: Border.all(width: 1, color: Colors.grey)),
-                  child: image == null
-                      ? Center(
-                          child: IconButton(
-                          icon: Icon(Icons.add_a_photo),
-                          color: Colors.grey,
-                          onPressed: () {
-                            getImageFromGallery();
-                          },
-                        ))
-                      : Stack(
-                          children: <Widget>[
-                            Image.file(image),
-                            Positioned(
-                              top: 0,
-                              right: 0,
-                              child: IconButton(
-                                icon: Icon(Icons.close),
-                                onPressed: () {
-                                  setState(() {
-                                    image = null;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-              ),
-            ),
-            SizedBox(height: 10),
-            OutlineButton(
-              onPressed: () async {
-                fileName = basename(image.path);
-                final StorageReference firebaseStorageRef = FirebaseStorage.instance.ref().child('images/$fileName');
-                final StorageUploadTask task = firebaseStorageRef.putFile(image);
-                String getUrl = await (await task.onComplete).ref.getDownloadURL();
-                setState(() {
-                  imageUrl = getUrl;
-                });
-              },
-              child: Text('Upload image'),
-            ),
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                            border: Border.all(width: 1, color: Colors.grey)),
+                        child: Builder(builder: (context) {
+                          if (image == null) {
+                            return Center(
+                                child: IconButton(
+                              icon: Icon(Icons.add_a_photo),
+                              color: Colors.grey,
+                              onPressed: () {
+                                _imagePickerDialog(context);
+                              },
+                            ));
+                          } else {
+                            return Stack(
+                              children: <Widget>[
+                                Image.file(image),
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: IconButton(
+                                    icon: Icon(Icons.close),
+                                    onPressed: () {
+                                      setState(() {
+                                        image = null;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                        }),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    OutlineButton(
+                      onPressed: image == null ? null : uploadImage,
+                      child: Text('Upload image'),
+                    ),
                     SizedBox(height: 80),
                   ],
                 ),
@@ -283,7 +298,7 @@ class AddDonationPageState extends State<AddDonationPage> {
         floatingActionButton: FloatingActionButton.extended(
           icon: Icon(Icons.file_upload),
           label: Text('Add Donation'),
-          onPressed: (){
+          onPressed: () {
             addItem();
             Navigator.pop(context, '$_name added successfully.');
           },
@@ -310,7 +325,7 @@ class AddDonationPageState extends State<AddDonationPage> {
                     leading: Icon(Icons.image),
                     title: Text('Gallery'),
                     onTap: () {
-                      getImageFromGallery();
+                      getImageFromGallery(context);
                     },
                   ),
                   ListTile(
@@ -318,7 +333,7 @@ class AddDonationPageState extends State<AddDonationPage> {
                     leading: Icon(Icons.camera_alt),
                     title: Text('Camera'),
                     onTap: () {
-                      getImageFromCamera();
+                      getImageFromCamera(context);
                     },
                   )
                 ],
@@ -330,18 +345,19 @@ class AddDonationPageState extends State<AddDonationPage> {
 
   Future<void> addItem() async {
     final _form = _formKey.currentState;
-    if(_form.validate()){
+    if (_form.validate()) {
       _form.save();
       Firestore.instance.collection('items').add({
         "userId": user.uid,
         "name": _name,
-        "addedAt": Timestamp.now(),
+        "addedAt": DateTime.now(),
         "category": _category,
         "itemCondition": _condition,
         "quantity": _quantity,
         "description": _description,
         "delivMethod": _method,
         "imageUrl": imageUrl,
+        "isAvailable": true,
       });
     }
   }

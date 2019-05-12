@@ -1,40 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:donatekuyv2/auth_provider.dart';
+import 'package:donatekuyv2/itemsbycategory.dart';
 import 'package:flutter/material.dart';
 import 'adddonation.dart';
-import 'auth.dart';
 import 'theme.dart';
-import 'login.dart';
 import 'profile.dart';
 
 class HomePage extends StatefulWidget {
-  final BaseAuth auth;
   final VoidCallback onSignedOut;
-  HomePage({Key key, this.auth, this.onSignedOut}) : super(key: key);
+  final String userId;
+  HomePage({Key key, this.onSignedOut, this.userId}) : super(key: key);
 
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  FirebaseUser user;
-
-  @override
-  void initState() {
-    super.initState();
-    _getUserDetails();
-  }
-
-  Future<Null> _getUserDetails() async {
-    FirebaseUser currUser = await FirebaseAuth.instance.currentUser();
-    setState(() {
-      user = currUser;
-    });
-  }
-
   void _signOut() async {
     try {
-      await widget.auth.signOut();
+      var auth = AuthProvider.of(context).auth;
+      await auth.signOut();
       widget.onSignedOut();
     } catch (e) {
       _showError(e);
@@ -60,7 +44,7 @@ class _HomePageState extends State<HomePage> {
         });
   }
 
-  Row profileHeader(AsyncSnapshot<dynamic> snapshot) {
+  Row profileHeader(dynamic data) {
     return Row(
       children: <Widget>[
         Expanded(
@@ -71,14 +55,17 @@ class _HomePageState extends State<HomePage> {
                 height: 64,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(32),
-                  child: Image.network('${snapshot.data['avatar']}'),
+                  child: Image.network(
+                    data['avatar'],
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               SizedBox(
                 width: 16,
               ),
               Text(
-                snapshot.data['firstName'],
+                data['firstName'],
                 style: TextStyle(
                   fontSize: 18.0,
                   color: Colors.white,
@@ -126,35 +113,35 @@ class _HomePageState extends State<HomePage> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => ProfilePage()),
+                      MaterialPageRoute(builder: (context) => ProfilePage(profileId: widget.userId)),
                     );
                   },
                   child: StreamBuilder(
                     stream: Firestore.instance
                         .collection('users')
-                        .document(user.uid)
+                        .document('${widget.userId}')
                         .snapshots(),
                     builder: (context, snapshot) {
-                      if(snapshot.hasError)
+                      if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+                      if (snapshot.hasError)
                         return Text('Error!');
                       else if (snapshot.data == null)
-                        return Text('Loading...');
+                        return Text(
+                          'Loading...',
+                          style: TextStyle(color: Colors.white),
+                        );
                       else
-                        return profileHeader(snapshot);
+                        return profileHeader(snapshot.data);
                     },
                   ),
                 ),
               ),
             ),
           ),
-          _buildDrawerTile('Your Donation', context, LoginPage()),
-          _buildDrawerTile('Q&A', context, LoginPage()),
-          _buildDrawerTile('Settings', context, LoginPage()),
-          _buildDrawerTile('About', context, LoginPage()),
           ListTile(
             title: Text(
               'Log out',
-              style: TextStyle(fontSize: 16.0, color: Colors.grey),
+              style: TextStyle(fontSize: 16.0, color: Colors.black),
             ),
             onTap: _signOut,
           ),
@@ -188,10 +175,6 @@ class _HomePageState extends State<HomePage> {
         appBar: AppBar(
           title: Text('DonateKuy'),
           actions: <Widget>[
-            IconButton(
-              icon: Icon(Icons.search),
-              onPressed: () {},
-            ),
             Builder(builder: (context) {
               return IconButton(
                 tooltip: 'Add Donation',
@@ -214,35 +197,61 @@ class _HomePageState extends State<HomePage> {
         drawer: mainDrawer,
         body: ListView(
           children: <Widget>[
-            SizedBox(
-                width: MediaQuery.of(context).size.width,
-                child: Image.asset('images/carousel-0.jpg')),
-            SizedBox(height: 20),
+            AspectRatio(
+              aspectRatio: 16/9,
+              child: SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  child: Image.asset(
+                    'images/carousel-0.jpg',
+                    fit: BoxFit.cover,
+                  )),
+            ),
+            SizedBox(height: 16),
             dividerWithText('Browse Categories'),
-            SizedBox(height: 20),
-            Center(),
-            //TODO: category grid
+            SizedBox(height: 16),
+            StreamBuilder(
+              stream: Firestore.instance
+                  .collection('categories')
+                  .orderBy('name')
+                  .snapshots(),
+              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                if (!snapshot.hasData || snapshot.data == null)
+                  return CircularProgressIndicator();
+                return ListView(
+                  shrinkWrap: true,
+                  physics: ScrollPhysics(),
+                  children: snapshot.data.documents.map((document) {
+                    return Container(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 2, horizontal: 18),
+                      child: Card(
+                        elevation: 2.4,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.widgets,
+                            color: Colors.grey,
+                          ),
+                          trailing: Icon(Icons.chevron_right),
+                          title: Text(document['name']),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => ItemsByCategoryPage(category: document['name']))
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
             SizedBox(height: 20),
           ],
         ),
       ),
     );
-  }
-
-  ListTile _buildDrawerTile(String label, BuildContext context, Widget page) {
-    return ListTile(
-        title: Text(
-          label,
-          style: TextStyle(
-            fontSize: 16.0,
-            color: myTheme().primaryColor,
-          ),
-        ),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => page),
-          );
-        });
   }
 }

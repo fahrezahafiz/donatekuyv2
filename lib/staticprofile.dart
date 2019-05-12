@@ -6,39 +6,28 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'theme.dart';
 
-class ProfilePage extends StatefulWidget {
+class StaticProfilePage extends StatefulWidget {
   final String profileId;
-  ProfilePage({Key key, this.profileId}) : super(key: key);
+  StaticProfilePage({Key key, this.profileId}) : super(key: key);
 
-  _ProfilePageState createState() => _ProfilePageState();
+  _StaticProfilePageState createState() => _StaticProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _StaticProfilePageState extends State<StaticProfilePage> {
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Your Profile',
+      title: 'Profile',
       theme: myTheme(),
       home: Scaffold(
         appBar: AppBar(
           centerTitle: true,
-          title: Text('Your Profile'),
+          title: Text('Profile'),
           leading: IconButton(
             icon: Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context),
           ),
-          actions: <Widget>[
-            IconButton(
-              icon: Icon(Icons.edit),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => EditProfilePage()),
-                );
-              },
-            ),
-          ],
         ),
         body: ListView(
           children: <Widget>[
@@ -92,7 +81,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           title: Text(document['name']),
                           subtitle: Text(document['addedAt'].toString()),
-                          trailing: itemMenu(document.documentID),
                           onTap: () {
                             Navigator.push(
                               context,
@@ -110,61 +98,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
     );
-  }
-  Widget itemMenu(String docId) {
-    return PopupMenuButton<String>(
-      onSelected: (String option){
-        executeOption(option, docId);
-      },
-      itemBuilder: (context){
-        return ItemAction.options.map((String option){
-          return PopupMenuItem<String>(
-            value: option,
-            child: Text(option),
-          );
-        }).toList();
-      },
-    );
-  }
-
-  Future<void> executeOption(String option, String docId) async{
-    switch (option) {
-      case ItemAction.markAsDone:
-        await Firestore.instance.collection('items').document(docId).updateData({
-          "isAvailable": false
-        });
-        break;
-      case ItemAction.unmarkAsDone:
-        await Firestore.instance.collection('items').document(docId).updateData({
-          "isAvailable": true
-        });
-        break;
-      case ItemAction.delete:
-        showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Delete item'),
-            content: Text('Are you sure?'),
-            actions: <Widget>[
-              FlatButton(
-                child: Text('No'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),FlatButton(
-                child: Text('Yes'),
-                onPressed: () async {
-                  await Firestore.instance.collection('items').document(docId).delete().then((_){
-                    Navigator.of(context).pop();
-                  });
-                },
-              ),
-            ],
-          );
-        });
-        break;
-    }
   }
 }
 
@@ -275,16 +208,4 @@ class ImageDetail extends StatelessWidget {
       ),
     );
   }
-}
-
-class ItemAction {
-  static const String markAsDone = 'Mark as done';
-  static const String unmarkAsDone = 'Unmark as done';
-  static const String delete = 'Delete';
-
-  static const List<String> options = <String> [
-    markAsDone,
-    unmarkAsDone,
-    delete
-  ];
 }
